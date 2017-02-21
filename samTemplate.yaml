@@ -5,13 +5,17 @@ Resources:
   TimeFunction:
     Type: AWS::Serverless::Function
     Properties:
+      FunctionName: dev_timeFunction
       Handler: index.handler
       Runtime: nodejs4.3
       Description: Lambda to outputs the time
       CodeUri: ./
+      MemorySize: 128
+      Timeout: 5
       Events:
         MyTimeApi:
           Type: Api
           Properties:
+            Description: Imprime time
             Path: /TimeResource
             Method: GET
