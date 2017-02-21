@@ -1,12 +1,18 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Outputs the time
+Description: CloudFormation to outputs the time
 Resources:
+  Api: 
+    Type: AWS::Serverless::Api
+    Properties:
+      Description: Api Gateway gerado pelo SAM
+      StageName: dev
   TimeFunction:
     Type: AWS::Serverless::Function
     Properties:
       Handler: index.handler
       Runtime: nodejs4.3
+      Description: Lambda to outputs the time
       CodeUri: ./
       Events:
         MyTimeApi:
