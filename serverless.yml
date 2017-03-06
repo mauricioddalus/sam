@@ -1,0 +1,134 @@
+frameworkVersion: ">=1.1.0 <1.6.0"
+
+service: pipeline
+
+provider:
+  name:    aws
+  runtime: nodejs4.3
+  region:  us-east-1
+  stage:   ${opt:stage}
+  version: v1
+
+#Roles
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action: 
+        - "lambda:InvokeFunction"
+      Resource: "*"
+
+    - Effect: "Allow"
+      Action: 
+        - "SNS:Publish"
+      Resource: "*"
+
+    - Effect: "Allow"
+      Action:
+        - "dynamodb:*"
+      Resource: [
+        { "Fn::Join": [ ":", [
+              "arn:aws:dynamodb",
+              { "Ref": "AWS::Region" },
+              { "Ref": "AWS::AccountId" },
+              "table/${self:custom.stageVariables.db_prices}"
+            ] ] },
+        { "Fn::Join": [ ":",[
+              "arn:aws:dynamodb",
+              { "Ref": "AWS::Region" },
+              { "Ref": "AWS::AccountId" },
+              "table/${self:custom.stageVariables.db_prices}/*"
+            ] ] }
+      ]
+
+    - Effect: "Allow"
+      Action:
+        - "s3:PutObject"
+        - "s3:ListBucket"
+      Resource:
+        Fn::Join:
+          - ""
+          - - "arn:aws:s3:::"
+            - "Ref" : "ServerlessDeploymentBucket"
+
+    - Effect: "Allow"
+      Action:
+        - "logs:CreateLogGroup"
+        - "logs:CreateLogStream"
+        - "logs:PutLogEvents"
+      Resource: "arn:aws:logs:${self:provider.region}:*:*"
+
+custom:
+  stageVariables:
+    db_prices : ${self:provider.stage}_prices
+
+plugins:
+  - serverless-plugin-stage-variables
+
+package:
+  exclude:
+    - .git
+    - .gitignore
+    - .serverless**
+
+functions:
+# ENDPOINT dev/apipricing/v1/{storeId}/pricetables/{regionId}
+  getFunction:
+    name: ${self:service}-${self:provider.stage}-getFunction
+    description: Função para retorno de getFunction em ambiente de ${self:provider.stage}
+    handler: api/getStore.main
+    memorySize: 128
+    timeout: 10
+    events:
+      - http:
+          path:   ${self:service}/${self:provider.version}/function
+          method: GET
+          cors:   true
+
+  updateFunction:
+    name: ${self:service}-${self:provider.stage}-updateFunction
+    description: Função para update de updateFunction em ambiente de ${self:provider.stage}
+    handler: api/updateStore.main
+    memorySize: 128
+    timeout: 10
+    events:
+      - http:
+          path: ${self:service}/${self:provider.version}/function
+          method: PUT
+          cors:
+            origins:
+                - '*'
+            headers:
+                - Content-Type
+                - X-Amz-Date
+                - Authorization
+                - X-Api-Key
+                - X-Amz-Security-Token
+                - If-Match
+
+resources:
+  Resources:
+    copyPriceTableSNS:
+      Type: AWS::SNS::Topic
+      Properties:
+        DisplayName : copyPriceTable
+        Subscription: 
+          - 
+            Endpoint: mauricio.pereira@dedalusprime.com.br
+            Protocol: email
+        TopicName   : copyPT
+    priceTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.stageVariables.db_priceTables}
+        AttributeDefinitions:
+          - AttributeName: storeId
+            AttributeType: S
+          - AttributeName: regionId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: storeId
+            KeyType: HASH
+          - AttributeName: regionId
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 2
+          WriteCapacityUnits: 2

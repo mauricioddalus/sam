@@ -1,21 +1,80 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: CloudFormation to outputs the time
+Description: Simple API Endpoint configured using Swagger specified inline and backed by a Lambda function
 Resources:
-  TimeFunction:
+  MyApi:
+    Type: AWS::Serverless::Api
+    Properties:
+        StageName: dev
+        Variables:
+          db_store: dev_store
+        DefinitionBody:
+            swagger: 2.0
+            info:
+              title:
+                Ref: AWS::StackName
+            paths:
+              "/apistore/v1/stores":
+                /apistore/v1/stores:
+                  x-amazon-apigateway-integration:
+                    httpMethod: POST
+                    type: aws_proxy
+                    uri:
+                      Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${listStores.Arn}/invocations
+                  responses: {}
+            swagger: '2.0'
+
+  listStores:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: dev_timeFunction
+      FunctionName: dev_listStores
       Handler: index.handler
       Runtime: nodejs4.3
-      Description: Lambda to outputs the time
-      CodeUri: ./
-      MemorySize: 128
-      Timeout: 5
+      CodeUri: ./api/listStores.js
       Events:
-        MyTimeApi:
+        GetApi:
           Type: Api
           Properties:
-            Description: Imprime time
-            Path: /TimeResource
+            Path: /apistore/v1/store
             Method: GET
+            RestApiId: 
+                Ref: MyApi
+
+  priceTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: dev_stores
+      AttributeDefinitions:
+        - AttributeName: storeId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: storeId
+          KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 2
+        WriteCapacityUnits: 2
+      GlobalSecondaryIndexes: 
+        - 
+          IndexName: "host-storeId-index"
+          KeySchema: 
+            - 
+              AttributeName: "storeHost"
+              KeyType: "HASH"
+            - 
+              AttributeName: "storeId"
+              KeyType: "RANGE"
+          Projection: 
+            ProjectionType: "KEYS_ONLY"
+          ProvisionedThroughput: 
+            ReadCapacityUnits: "2"
+            WriteCapacityUnits: "2"
+        - 
+          IndexName: "active-index"
+          KeySchema: 
+            - AttributeName: "active"
+              KeyType: "HASH"
+          Projection: 
+            ProjectionType: "KEYS_ONLY"
+          ProvisionedThroughput: 
+            ReadCapacityUnits: "5"
+            WriteCapacityUnits: "5"
