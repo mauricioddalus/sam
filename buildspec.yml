@@ -9,5 +9,4 @@ phases:
     commands:
       - ls
       - pwd
-      - aws-sdk --version
-      - serverless --version
+      - /usr/local/lib/node_modules/serverless/bin/serverless --version
