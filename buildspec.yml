@@ -2,11 +2,11 @@ version: 0.1
 phases:
   install:
     commands:
-      - npm install aws-sdk
-      - npm install serverless@1.5.1
+      - sudo npm install -g npm install aws-sdk
+      - sudo npm install -g serverless@1.5.1
       - npm install serverless-plugin-stage-variables
   build:
     commands:
       - ls
       - pwd
-      - node_modules/serverless/bin/serverless --version
+      - sls -v
