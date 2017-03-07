@@ -2,5 +2,5 @@ version: 0.1
 phases:
   install:
     commands:
-      - sudo npm install -g serverless@1.5.1
+      - npm install
       - serverless deploy --stage dev
